@@ -1,7 +1,7 @@
 #Autoři: Denis Bastián, Natalie Sokalská
 
 """
-Prohlášení: Hlavní algoritmus k tvorbě voxelizace byl vytvořen autorem s využitím souboru "spatial_index.pdf".
+Prohlášení: Hlavní algoritmus k tvorbě voxelizace byl vytvořen autory s využitím souboru "spatial_index.pdf".
 AI (ChatGPT - GPT-6, Google Gemini - Hydrogen) byla použita k pomoci při hledání chyb,
 nedostatků a návrhu implementace výpočtu a vizualiace křivosti a hustoty bodového mračna.
 """

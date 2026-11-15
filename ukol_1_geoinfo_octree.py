@@ -1,7 +1,7 @@
 #Autoři: Denis Bastián, Natalie Sokalská
 
 """
-Prohlášení: Návhr skriptu a algoritmu k tvorbě octree byl vytvořen autorem.
+Prohlášení: Návhr skriptu a algoritmu k tvorbě octree byl vytvořen autory.
 AI (ChatGPT - GPT-6, Google Gemini - Hydrogen) byla použita k pomoci při hledání chyb,
 nedostatků a návrhu implementace výpočtu a vizualiace křivosti a hustoty bodového mračna.
 """
