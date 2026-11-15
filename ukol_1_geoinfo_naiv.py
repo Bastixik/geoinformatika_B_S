@@ -83,7 +83,6 @@ def benchmarkPointCount(X, Y, Z):
     return sizes, times, d_aver, rho
 
 
-
 # Plot: computation time as a function of input set size
 
 def drawTimes(sizes, times):
@@ -95,9 +94,6 @@ def drawTimes(sizes, times):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-
-
-
 
 
 # MAIN PROGRAM
