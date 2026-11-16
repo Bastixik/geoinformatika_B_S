@@ -1,9 +1,10 @@
+
 #Autoři: Denis Bastián, Natalie Sokalská
 
 """
-Prohlášení: Návhr skriptu a algoritmu k tvorbě octree byl vytvořen autory.
+Prohlášení: Návrh skriptu a algoritmu k tvorbě octree byl vytvořen autory.
 AI (ChatGPT - GPT-6, Google Gemini - Hydrogen) byla použita k pomoci při hledání chyb,
-nedostatků a návrhu implementace výpočtu a vizualiace křivosti a hustoty bodového mračna.
+nedostatků a návrhu implementace výpočtu a vizualizace křivosti a hustoty bodového mračna.
 """
 
 
@@ -15,6 +16,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 INPUT_FILE = r"C:\Users\denis\Desktop\škola\mgr\geoinformatika\ukol\tree_18.txt"
 MAX_POINTS = 50
+
 
 #Loading file
 def loadPoints(file):
@@ -178,43 +180,32 @@ def computeCurvature(X, Y, Z, idxs, voxel_dict, knn=30):
 
 #Density
 def computeDensity(X, Y, Z, idxs, voxel_dict):
-    density = np.full(len(X), np.nan)
-    distances = np.full(len(X), np.nan)
-    points = np.column_stack((X, Y, Z))
+    d_sum = 0
 
-    for point_id in range(len(X)):
-        #Get hash of the current point's voxel
-        h = idxs[point_id]
-
-        #Get points only from the current voxel
+    for i in range(len(X)):
+        h = idxs[i]
         candidates = voxel_dict[h]
 
         #Remove the current point
-        candidates = [i for i in candidates if i != point_id]
+        candidates = [j for j in candidates if j != i]
 
         if len(candidates) == 0:
             continue
 
-        #Calculate distances
-        candidate_points = points[candidates]
-        query_point = points[point_id]
-        dist = np.linalg.norm(candidate_points - query_point, axis=1)
+        d_min = np.inf
 
-        #Find nearest neighbor
-        d_min = np.min(dist)
-        distances[point_id] = d_min
+        for j in candidates:
+            distance = np.sqrt((X[i] - X[j])**2 + (Y[i] - Y[j])**2 + (Z[i] - Z[j])**2)
 
-        #Density = 1 / d_min^3
-        if d_min > 0:
-            density[point_id] = 1 / (d_min ** 3)
+            if distance < d_min:
+                d_min = distance
 
-    #Average nearest-neighbor distance
-    if np.any(~np.isnan(distances)):
-        d_aver = np.nanmean(distances)
-    else:
-        d_aver = np.nan
+        d_sum = d_sum + d_min
 
-    return density, distances, d_aver
+    d_aver = d_sum / len(X)
+    rho = 1 / d_aver**3
+
+    return d_aver, rho
 
 
 #Visualization of curvature
@@ -269,10 +260,12 @@ for box_id, (box, boxPoints) in enumerate(octree):
 
 
 #Calculating curvature and density
-print("\nCalculating curvature...")
+print("\nCalculating curvature and density...")
 curvature = computeCurvature(X, Y, Z, boxIndexes, voxel_dict, knn=30)
-print("\nCalculating density...")
-density, distances, d_aver = computeDensity(X, Y, Z, boxIndexes, voxel_dict)
+
+#Calculating density
+d_aver, rho = computeDensity(X, Y, Z, boxIndexes, voxel_dict)
+print("Density:", rho)
 
 
 #Printing the results
@@ -286,7 +279,7 @@ print("Number of splits:", numberOfSplits)
 print("Tree depth:", maxDepth)
 print("Run time:", buildTime, "seconds")
 print("Average nearest-neighbor distance:", d_aver)
-print("======================================")
+
 
 #Visualization of curvature
 drawCurvature(X, Y, Z, curvature)

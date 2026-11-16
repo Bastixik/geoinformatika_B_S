@@ -1,10 +1,12 @@
+
 #Autoři: Denis Bastián, Natalie Sokalská
 
 """
 Prohlášení: Hlavní algoritmus k tvorbě voxelizace byl vytvořen autory s využitím souboru "spatial_index.pdf".
 AI (ChatGPT - GPT-6, Google Gemini - Hydrogen) byla použita k pomoci při hledání chyb,
-nedostatků a návrhu implementace výpočtu a vizualiace křivosti a hustoty bodového mračna.
+nedostatků a návrhu implementace výpočtu a vizualizace křivosti a hustoty bodového mračna.
 """
+
 
 import math
 from time import time
@@ -20,6 +22,7 @@ def loadPoints(file):
     with open(file, "r") as f:
         for line in f:
             parts = line.strip().split("\t")
+
             if len(parts) == 3:
                 x, y, z = parts
                 X.append(float(x))
@@ -34,6 +37,7 @@ def loadPoints(file):
 #Calculate grid size
 def calculateGridSize(n):
     k = 3
+
     n_b = n ** (1 / k)
     n_r = round(n_b ** (1 / k))
     n_r = max(1, n_r)
@@ -60,6 +64,7 @@ def init_spat_index(X, Y, Z, n_r):
 def get3Dindex(x, y, z, dx, dy, dz, x_min, y_min, z_min, n_r):
     #Multiplication by n_r is necessary to cancel the n_r in the dx variable so it matches the calculation in the PDF
     c = 0.99
+
     x_prime = (x - x_min) / (dx * n_r)
     y_prime = (y - y_min) / (dy * n_r)
     z_prime = (z - z_min) / (dz * n_r)
@@ -101,42 +106,41 @@ def createSpatialIDXs(X, Y, Z, dx, dy, dz, x_min, y_min, z_min, n_r):
 
     return idxs
 
+
 #Density
 def computeDensity(X, Y, Z, idxs, voxel_dict):
-    density = np.full(len(X), np.nan)
-    distances = np.full(len(X), np.nan)
-    points = np.column_stack((X, Y, Z))
+    d_sum = 0
 
-    for point_id in range(len(X)):
+    for i in range(len(X)):
         #Get hash of the current point's voxel
-        h = idxs[point_id]
+        h = idxs[i]
 
         #Get points only from the current voxel
         candidates = voxel_dict[h]
 
         #Remove the current point
-        candidates = [i for i in candidates if i != point_id]
-        
+        candidates = [j for j in candidates if j != i]
+
         if len(candidates) == 0:
             continue
 
-        #Calculate distances
-        candidate_points = points[candidates]
-        query_point = points[point_id]
-        dist = np.linalg.norm(candidate_points - query_point, axis=1)
+        d_min = np.inf
 
-        #Find nearest neighbor
-        d_min = np.min(dist)
-        distances[point_id] = d_min
+        for j in candidates:
+            distance = np.sqrt((X[i] - X[j])**2 + (Y[i] - Y[j])**2 + (Z[i] - Z[j])**2)
 
-        #Density = 1 / d_min^3
-        if d_min > 0:
-            density[point_id] = 1 / (d_min ** 3)
+            if distance < d_min:
+                d_min = distance
+
+        d_sum = d_sum + d_min
 
     #Average nearest-neighbor distance
-    d_aver = np.nanmean(distances)
+    d_aver = d_sum / len(X)
 
-    return density, distances, d_aver
+    #Overall density
+    rho = 1 / d_aver**3
+
+    return d_aver, rho
 
 
 #Calculate curvature
@@ -214,6 +218,7 @@ def drawCurvature(X, Y, Z, curvature):
     plt.tight_layout()
     plt.show()
 
+
 #Starting the voxelization
 def runVoxelization(X, Y, Z, n_r):
     start = time()
@@ -228,13 +233,13 @@ def runVoxelization(X, Y, Z, n_r):
     idxs = createSpatialIDXs(X, Y, Z, dx, dy, dz, x_min, y_min, z_min, n_r)
 
     #Compute density
-    density, distances, d_aver = computeDensity(X, Y, Z, idxs, voxel_dict)
+    d_aver, rho = computeDensity(X, Y, Z, idxs, voxel_dict)
 
     #Compute curvature
     curvature = computeCurvature(X, Y, Z, idxs, voxel_dict, knn=30)
     elapsed_time = time() - start
 
-    return density, distances, d_aver, curvature, elapsed_time
+    return d_aver, rho, curvature, elapsed_time
 
 
 #Benchmarking functions - number of points
@@ -248,6 +253,7 @@ def benchmarkPointCount(X, Y, Z):
     #Take random samples of points and run voxelization for each sample size
     for size in test_sizes:
         print("\nTesting number of points:", size)
+
         if size == len(X):
             indices = np.arange(len(X))
         else:
@@ -261,10 +267,8 @@ def benchmarkPointCount(X, Y, Z):
         n_b, n_r = calculateGridSize(size)
 
         #Run voxelization and measure computation time
-        print("n_b:", n_b)
-        print("n_r:", n_r)
         result = runVoxelization(X_test, Y_test, Z_test, n_r)
-        computation_times.append(result[4])
+        computation_times.append(result[3])
 
     #Visualization of computation time vs number of points
     plt.figure(figsize=(9, 6))
@@ -287,8 +291,9 @@ def benchmarkGridSize(X, Y, Z):
     #Run voxelization for each grid size and measure computation time
     for n_r_test in grid_sizes:
         print("\nTesting grid size:", n_r_test)
+
         result = runVoxelization(X, Y, Z, n_r_test)
-        computation_times.append(result[4])
+        computation_times.append(result[3])
 
     #Visualization of computation time vs grid size
     plt.figure(figsize=(9, 6))
@@ -302,26 +307,29 @@ def benchmarkGridSize(X, Y, Z):
 
     return grid_sizes, computation_times
 
+#MAIN PROGRAM
 
-if __name__ == "__main__":
+file = r"C:\Users\denis\Desktop\škola\mgr\geoinformatika\geoinformatika_B_S\tree_18.txt"
 
-    #INPUT FILE
-    file = r"C:\Users\denis\Desktop\škola\mgr\geoinformatika\ukol\tree_18.txt"
+#Load points
+X, Y, Z = loadPoints(file)
 
-    #Load point cloud
-    X, Y, Z = loadPoints(file)
-    n = len(X)
+#Calculate grid size
+n_b, n_r = calculateGridSize(len(X))
 
-    #Calculate grid size
-    n_b, n_r = calculateGridSize(n)
+#Run voxelization
+d_aver, rho, curvature, elapsed_time = runVoxelization(X, Y, Z, n_r)
 
-    #Run main calculation
-    density, distances, d_aver, curvature, elapsed_time = runVoxelization(X, Y, Z, n_r)
-    print("Total computation time:", elapsed_time, "s")
+#Print results
+print("\nVoxelization results:")
+print("Average nearest-neighbor distance:", d_aver)
+print("Density:", rho)
+print("Average curvature:", np.mean(curvature))
+print("Runtime:", elapsed_time, "seconds")
 
-    #Visualize curvature
-    drawCurvature(X, Y, Z, curvature)
+#Visualize curvature
+drawCurvature(X, Y, Z, curvature)
 
-    #Benchmark according to number of points and grid size
-    benchmarkPointCount(X, Y, Z)
-    benchmarkGridSize(X, Y, Z)
+#Running benchmarks
+benchmarkPointCount(X, Y, Z)
+benchmarkGridSize(X, Y, Z)
