@@ -223,6 +223,65 @@ def drawCurvature(X, Y, Z, curvature):
     plt.tight_layout()
     plt.show()
 
+# Benchmark - calculation time depending on input size
+def benchmarkOctree(X, Y, Z, repeats=3):
+    n = len(X)
+
+    # Fixed input sizes
+    sample_sizes = [100, 1000, 5000, 10000, 25000]
+
+    # Use only sizes that are available in the input data
+    sample_sizes = [size for size in sample_sizes if size <= n]
+
+    rng = np.random.default_rng(42)
+
+    mean_times = []
+
+    for size in sample_sizes:
+        run_times = []
+
+        for repeat in range(repeats):
+
+            # Randomly select points
+            sample_indices = rng.choice(n, size=size, replace=False)
+
+            sample_points = [
+                (i, X[index], Y[index], Z[index])
+                for i, index in enumerate(sample_indices)
+            ]
+
+            # Measure Octree construction time
+            startTime = time.process_time()
+
+            createOctree(sample_points)
+
+            runTime = time.process_time() - startTime
+
+            run_times.append(runTime)
+
+        mean_time = np.mean(run_times)
+        mean_times.append(mean_time)
+
+    return sample_sizes, mean_times
+
+
+# Visualization of calculation time
+def drawRuntime(sample_sizes, mean_times):
+    plt.figure(figsize=(10, 6))
+
+    plt.errorbar(
+        sample_sizes,
+        mean_times,
+        fmt="o-",
+        capsize=4
+    )
+
+    plt.xlabel("Number of input points")
+    plt.ylabel("Calculation time (seconds)")
+    plt.title("Octree calculation time depending on input size")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 #Loading the file with points
 print("Loading points...")
@@ -280,6 +339,15 @@ print("Tree depth:", maxDepth)
 print("Run time:", buildTime, "seconds")
 print("Average nearest-neighbor distance:", d_aver)
 
+#Benchmark - calculation time depending on input size
+print("\nBenchmarking Octree...")
+
+sample_sizes, mean_times = benchmarkOctree(
+    X, Y, Z, repeats=3
+)
+
+#Visualization of calculation time
+drawRuntime(sample_sizes, mean_times)
 
 #Visualization of curvature
 drawCurvature(X, Y, Z, curvature)
