@@ -179,11 +179,14 @@ def computeCurvature(X, Y, Z, idxs, voxel_dict, knn=30):
 
 
 #Density
-def computeDensity(X, Y, Z, idxs, voxel_dict):
+def computeDensity(X, Y, Z, idxs, voxel_dict, knn=30):
     d_sum = 0
 
     for i in range(len(X)):
+        #Get hash of the current point's voxel
         h = idxs[i]
+
+        #Get points only from the current voxel
         candidates = voxel_dict[h]
 
         #Remove the current point
@@ -192,17 +195,31 @@ def computeDensity(X, Y, Z, idxs, voxel_dict):
         if len(candidates) == 0:
             continue
 
-        d_min = np.inf
+        #Calculate distances to candidate points
+        distances = []
 
         for j in candidates:
-            distance = np.sqrt((X[i] - X[j])**2 + (Y[i] - Y[j])**2 + (Z[i] - Z[j])**2)
+            distance = np.sqrt(
+                (X[i] - X[j])**2 +
+                (Y[i] - Y[j])**2 +
+                (Z[i] - Z[j])**2
+            )
 
-            if distance < d_min:
-                d_min = distance
+            distances.append(distance)
 
-        d_sum = d_sum + d_min
+        #Select up to knn nearest neighbors
+        n_neighbors = min(knn, len(distances))
+        nearest_distances = np.partition(distances, n_neighbors - 1)[:n_neighbors]
 
+        #Average distance to nearest neighbors
+        d_point = np.mean(nearest_distances)
+
+        d_sum = d_sum + d_point
+
+    #Average nearest-neighbor distance
     d_aver = d_sum / len(X)
+
+    #Overall density
     rho = 1 / d_aver**3
 
     return d_aver, rho
@@ -323,7 +340,7 @@ print("\nCalculating curvature and density...")
 curvature = computeCurvature(X, Y, Z, boxIndexes, voxel_dict, knn=30)
 
 #Calculating density
-d_aver, rho = computeDensity(X, Y, Z, boxIndexes, voxel_dict)
+d_aver, rho = computeDensity(X, Y, Z, boxIndexes, voxel_dict, knn=30)
 print("Density:", rho)
 
 
